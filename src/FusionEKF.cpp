@@ -39,10 +39,10 @@ FusionEKF::FusionEKF()
    */
 
   // Initialize state transition matrix
-  ekf_.F_ << 1, 0, 1, 0,
-      0, 1, 0, 1,
-      0, 0, 1, 0,
-      0, 0, 0, 1;
+  ekf_.F_ = MatrixXd(4, 4);
+
+  // initial process covariance matrix
+  ekf_.Q_ = MatrixXd(4, 4);
 
   // initial state vector
   ekf_.x_ = VectorXd(4);
@@ -90,6 +90,7 @@ void FusionEKF::InitializeStates(const MeasurementPackage &measurement_pack)
         0, 0, 0, 1;
   }
   is_initialized_ = true;
+  previous_timestamp_ = measurement_pack.timestamp_;
 }
 
 void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack)
@@ -117,8 +118,10 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack)
    * TODO: Update the process noise covariance matrix.
    * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
    */
+  double dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;
+  previous_timestamp_ = measurement_pack.timestamp_;
 
-  ekf_.Predict();
+  ekf_.Predict(dt);
 
   /**
    * Update

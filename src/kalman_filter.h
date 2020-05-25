@@ -3,8 +3,9 @@
 
 #include "Eigen/Dense"
 
-class KalmanFilter {
- public:
+class KalmanFilter
+{
+public:
   /**
    * Constructor
    */
@@ -28,11 +29,17 @@ class KalmanFilter {
             Eigen::MatrixXd &H_in, Eigen::MatrixXd &R_in, Eigen::MatrixXd &Q_in);
 
   /**
+   * UpdateTransitionMatrix updates transition matrix F_
+   * @param dt Time between k and k+1 in s
+   */
+  void UpdateTransitionMatrix(const double &dt);
+
+  /**
    * Prediction Predicts the state and the state covariance
    * using the process model
-   * @param delta_T Time between k and k+1 in s
+   * @param dt Time between k and k+1 in s
    */
-  void Predict();
+  void Predict(const double &dt);
 
   /**
    * Updates the state by using standard Kalman Filter equations
