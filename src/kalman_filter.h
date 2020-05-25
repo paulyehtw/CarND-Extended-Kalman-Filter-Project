@@ -29,6 +29,12 @@ public:
             Eigen::MatrixXd &H_in, Eigen::MatrixXd &R_in, Eigen::MatrixXd &Q_in);
 
   /**
+   * UpdateProcessCovarianMatrix updates process covariance matrix Q_
+   * @param dt Time between k and k+1 in s
+   */
+  void UpdateProcessCovarianMatrix(const double &dt);
+
+  /**
    * UpdateTransitionMatrix updates transition matrix F_
    * @param dt Time between k and k+1 in s
    */
@@ -70,6 +76,12 @@ public:
 
   // measurement covariance matrix
   Eigen::MatrixXd R_;
+
+  // proecess noise on x direction
+  double noise_ax_;
+
+  // proecess noise on y direction
+  double noise_ay_;
 };
 
 #endif // KALMAN_FILTER_H_

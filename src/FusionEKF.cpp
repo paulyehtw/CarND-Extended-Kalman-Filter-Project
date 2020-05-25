@@ -46,6 +46,12 @@ FusionEKF::FusionEKF()
 
   // initial state vector
   ekf_.x_ = VectorXd(4);
+
+  // proecess noise on x direction
+  ekf_.noise_ax_ = 9.0;
+
+  // proecess noise on y direction
+  ekf_.noise_ay_ = 9.0;
 }
 
 /**

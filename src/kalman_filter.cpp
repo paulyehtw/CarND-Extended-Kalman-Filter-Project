@@ -23,12 +23,22 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
   Q_ = Q_in;
 }
 
+void KalmanFilter::UpdateProcessCovarianMatrix(const double &dt)
+{
+  double dt2 = dt * dt;
+  double dt3 = dt2 * dt;
+  double dt4 = dt3 * dt;
+
+  Q_ << dt4 / 4 * noise_ax_, 0, dt3 / 2 * noise_ax_, 0,
+      0, dt4 / 4 * noise_ay_, 0, dt3 / 2 * noise_ay_,
+      dt3 / 2 * noise_ax_, 0, dt2 * noise_ax_, 0,
+      0, dt3 / 2 * noise_ay_, 0, dt2 * noise_ay_;
+}
+
 void KalmanFilter::UpdateTransitionMatrix(const double &dt)
 {
-  F_ << 1, 0, dt, 0,
-      0, 1, 0, dt,
-      0, 0, 1, 0,
-      0, 0, 0, 1;
+  F_(0, 2) = dt;
+  F_(1, 3) = dt;
 }
 
 void KalmanFilter::Predict(const double &dt)
@@ -37,6 +47,10 @@ void KalmanFilter::Predict(const double &dt)
    * TODO: predict the state
    */
   UpdateTransitionMatrix(dt);
+  UpdateProcessCovarianMatrix(dt);
+
+  x_ = F_ * x_;                       // Predict state
+  P_ = F_ * P_ * F_.transpose() + Q_; // Predict covariance
 }
 
 void KalmanFilter::Update(const VectorXd &z)
