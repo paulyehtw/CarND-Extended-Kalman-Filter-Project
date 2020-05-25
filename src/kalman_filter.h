@@ -59,11 +59,17 @@ public:
   // process covariance matrix
   Eigen::MatrixXd Q_;
 
-  // // measurement matrix
+  // measurement matrix
   Eigen::MatrixXd H_;
 
-  // measurement covariance matrix
-  Eigen::MatrixXd R_;
+  // jacobian matrix
+  Eigen::MatrixXd Hj_;
+
+  // Lidar measurement covariance matrix
+  Eigen::MatrixXd R_lidar_;
+
+  // Radar measurement covariance matrix
+  Eigen::MatrixXd R_radar_;
 
   // proecess noise on x direction
   double noise_ax_;
