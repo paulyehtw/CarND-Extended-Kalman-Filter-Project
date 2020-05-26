@@ -15,13 +15,15 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
    /**
    * TODO: Calculate the RMSE here.
    */
-   VectorXd RMSE(ground_truth[0].size());
+   VectorXd RMSE(4);
    RMSE.fill(0.0);
    size_t n = ground_truth.size();
    for (size_t i = 0; i < n; ++i)
    {
       // squared errors
-      RMSE += (estimations[i] - ground_truth[i]) * (estimations[i] - ground_truth[i]);
+      VectorXd error = estimations[i] - ground_truth[i];
+      error = error.array() * error.array();
+      RMSE += error;
    }
    RMSE /= n;
    RMSE = RMSE.array().sqrt();
@@ -31,10 +33,10 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
 
 MatrixXd Tools::CalculateJacobian(const VectorXd &x_state)
 {
-   /**
-   * TODO:
-   * Calculate a Jacobian here.
-   */
+   // /**
+   // * TODO:
+   // * Calculate a Jacobian here.
+   // */
 
    MatrixXd Hj(3, 4);
    Hj.fill(0.0);

@@ -42,8 +42,11 @@ FusionEKF::FusionEKF()
    * TODO: Set the process and measurement noises
    */
 
+  // Initialize covarian matrix
+  ekf_.P_ = MatrixXd(4, 4);
+
   // Initialize state transition matrix
-  ekf_.F_ = MatrixXd(4, 4);
+  ekf_.F_ = MatrixXd::Identity(4, 4);
 
   // initial process covariance matrix
   ekf_.Q_ = MatrixXd(4, 4);
@@ -99,6 +102,7 @@ void FusionEKF::InitializeStates(const MeasurementPackage &measurement_pack)
         0, 0, 1, 0,
         0, 0, 0, 1;
   }
+
   is_initialized_ = true;
   previous_timestamp_ = measurement_pack.timestamp_;
 }
@@ -116,6 +120,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack)
      * You'll need to convert radar from polar to cartesian coordinates.
      */
     InitializeStates(measurement_pack);
+    return;
   }
 
   /**

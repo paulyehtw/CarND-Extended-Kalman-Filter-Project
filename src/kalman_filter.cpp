@@ -66,12 +66,12 @@ void KalmanFilter::UpdateEKF(const VectorXd &z)
    */
   VectorXd z_pred = Hj_ * x_;
   VectorXd y = z - z_pred;
-  MatrixXd S = H_ * P_ * H_.transpose() + R_radar_;
+  MatrixXd S = Hj_ * P_ * Hj_.transpose() + R_radar_;
   MatrixXd S_inv = S.inverse();
-  MatrixXd K = P_ * H_.transpose() * S_inv; // Kalman gain
+  MatrixXd K = P_ * Hj_.transpose() * S_inv; // Kalman gain
 
   x_ = x_ + (K * y); // Update state
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
-  P_ = (I - K * H_) * P_; // Update covariance matrix
+  P_ = (I - K * Hj_) * P_; // Update covariance matrix
 }
