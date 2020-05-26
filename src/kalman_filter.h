@@ -3,8 +3,9 @@
 
 #include "Eigen/Dense"
 
-class KalmanFilter {
- public:
+class KalmanFilter
+{
+public:
   /**
    * Constructor
    */
@@ -16,23 +17,23 @@ class KalmanFilter {
   virtual ~KalmanFilter();
 
   /**
-   * Init Initializes Kalman filter
-   * @param x_in Initial state
-   * @param P_in Initial state covariance
-   * @param F_in Transition matrix
-   * @param H_in Measurement matrix
-   * @param R_in Measurement covariance matrix
-   * @param Q_in Process covariance matrix
+   * UpdateProcessCovarianMatrix updates process covariance matrix Q_
+   * @param dt Time between k and k+1 in s
    */
-  void Init(Eigen::VectorXd &x_in, Eigen::MatrixXd &P_in, Eigen::MatrixXd &F_in,
-            Eigen::MatrixXd &H_in, Eigen::MatrixXd &R_in, Eigen::MatrixXd &Q_in);
+  void UpdateProcessCovarianMatrix(const double &dt);
+
+  /**
+   * UpdateTransitionMatrix updates transition matrix F_
+   * @param dt Time between k and k+1 in s
+   */
+  void UpdateTransitionMatrix(const double &dt);
 
   /**
    * Prediction Predicts the state and the state covariance
    * using the process model
-   * @param delta_T Time between k and k+1 in s
+   * @param dt Time between k and k+1 in s
    */
-  void Predict();
+  void Predict(const double &dt);
 
   /**
    * Updates the state by using standard Kalman Filter equations
@@ -61,8 +62,20 @@ class KalmanFilter {
   // measurement matrix
   Eigen::MatrixXd H_;
 
-  // measurement covariance matrix
-  Eigen::MatrixXd R_;
+  // jacobian matrix
+  Eigen::MatrixXd Hj_;
+
+  // Lidar measurement covariance matrix
+  Eigen::MatrixXd R_lidar_;
+
+  // Radar measurement covariance matrix
+  Eigen::MatrixXd R_radar_;
+
+  // proecess noise on x direction
+  double noise_ax_;
+
+  // proecess noise on y direction
+  double noise_ay_;
 };
 
 #endif // KALMAN_FILTER_H_
