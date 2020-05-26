@@ -129,6 +129,254 @@ and how to install it.
 Regardless of the IDE used, every submitted project must
 still be compilable with cmake and make.
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+# Writeup for submission
+
+<p align="center">
+  <img  src="demo_images/EKF.gif">
+</p>
+
+---
+
+## EKF Workflow
+1. Initialize states with first mearsurement
+2. Predict state
+3. Update state with received measurement
+4. Loop over step 2 and step 3
+
+---
+
+### Initialize state
+in _FusionEKF.cpp_, implement `InitializeStates()` to initialize state with first measurement
+```
+void FusionEKF::InitializeStates(const MeasurementPackage &measurement_pack)
+{
+  if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR)
+  {
+    // TODO: Convert radar from polar to cartesian coordinates
+    // and initialize state.
+    double rho = measurement_pack.raw_measurements_(0);
+    double phi = measurement_pack.raw_measurements_(1);
+    double rho_d = measurement_pack.raw_measurements_(2);
+
+    double pos_x = rho * std::sin(phi);
+    double pos_y = rho * std::cos(phi);
+    double vel_x = rho_d * std::sin(phi);
+    double vel_y = rho_d * std::cos(phi);
+
+    ekf_.x_ << pos_x, pos_y, vel_x, vel_y;
+
+    ekf_.P_ << 10, 0, 0, 0,
+        0, 10, 0, 0,
+        0, 0, 10, 0,
+        0, 0, 0, 10;
+  }
+  else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER)
+  {
+    // TODO: Initialize state.
+    double pos_x = measurement_pack.raw_measurements_(0);
+    double pos_y = measurement_pack.raw_measurements_(1);
+
+    ekf_.x_ << pos_x, pos_y, 0.0, 0.0;
+
+    // Initialize state covariance
+    ekf_.P_ << 10, 0, 0, 0,
+        0, 10, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1;
+  }
+
+  is_initialized_ = true;
+  previous_timestamp_ = measurement_pack.timestamp_;
+}
+```
+
+---
+
+### Predict state
+in _kalman_filter.cpp_, implement `Predict()`,  `UpdateProcessCovarianMatrix()` and `UpdateTransitionMatrix()` to predict state
+
+```
+void KalmanFilter::UpdateProcessCovarianMatrix(const double &dt)
+{
+  double dt2 = dt * dt;
+  double dt3 = dt2 * dt;
+  double dt4 = dt3 * dt;
+
+  Q_ << dt4 / 4 * noise_ax_, 0, dt3 / 2 * noise_ax_, 0,
+      0, dt4 / 4 * noise_ay_, 0, dt3 / 2 * noise_ay_,
+      dt3 / 2 * noise_ax_, 0, dt2 * noise_ax_, 0,
+      0, dt3 / 2 * noise_ay_, 0, dt2 * noise_ay_;
+}
+```
+```
+void KalmanFilter::UpdateTransitionMatrix(const double &dt)
+{
+  F_(0, 2) = dt;
+  F_(1, 3) = dt;
+}
+```
+```
+void KalmanFilter::Predict(const double &dt)
+{
+  /**
+   * TODO: predict the state
+   */
+  UpdateTransitionMatrix(dt);
+  UpdateProcessCovarianMatrix(dt);
+
+  x_ = F_ * x_;                       // Predict state
+  P_ = F_ * P_ * F_.transpose() + Q_; // Predict covariance
+}
+```
+
+---
+
+### Update state
+in _kalman_filter.cpp_, implement `Update()` for **Lidar** measurement, `UpdateEKF()` for **Radar** measurement to update state
+```
+void KalmanFilter::Update(const VectorXd &z)
+{
+  /**
+   * TODO: update the state by using Kalman Filter equations
+   */
+  VectorXd z_pred = H_ * x_;
+  VectorXd y = z - z_pred;
+  MatrixXd S = H_ * P_ * H_.transpose() + R_lidar_;
+  MatrixXd S_inv = S.inverse();
+  MatrixXd K = P_ * H_.transpose() * S_inv; // Kalman gain
+
+  x_ = x_ + (K * y); // Update state
+  long x_size = x_.size();
+  MatrixXd I = MatrixXd::Identity(x_size, x_size);
+  P_ = (I - K * H_) * P_; // Update covariance matrix
+}
+```
+```
+void KalmanFilter::UpdateEKF(const VectorXd &z)
+{
+  /**
+   * TODO: update the state by using Extended Kalman Filter equations
+   */
+  double epslon = 0.00001;
+  double rho = sqrt(x_(0) * x_(0) + x_(1) * x_(1));
+  double phi = atan2(x_(1), x_(0));
+  double rho_dot;
+  if (fabs(rho) < epslon)
+  {
+    rho_dot = 0.0;
+  }
+  else
+  {
+    rho_dot = (x_(0) * x_(2) + x_(1) * x_(3)) / rho;
+  }
+
+  VectorXd z_pred(3);
+  z_pred << rho, phi, rho_dot;
+  VectorXd y = z - z_pred;
+
+  // Normalize phi
+  while (y(1) > M_PI)
+  {
+    y(1) -= 2.0 * M_PI;
+  }
+  while (y(1) < -M_PI)
+  {
+    y(1) += 2.0 * M_PI;
+  }
+
+  MatrixXd S = Hj_ * P_ * Hj_.transpose() + R_radar_;
+  MatrixXd S_inv = S.inverse();
+  MatrixXd K = P_ * Hj_.transpose() * S_inv; // Kalman gain
+
+  x_ = x_ + (K * y); // Update state
+  long x_size = x_.size();
+  MatrixXd I = MatrixXd::Identity(x_size, x_size);
+  P_ = (I - K * Hj_) * P_; // Update covariance matrix
+}
+```
+
+Additionally for Radar update, a **Jacobian matrix** update is needed.
+
+in _tools.cpp_, implement `CalculateJacobian()` is implemented for it.
+```
+MatrixXd Tools::CalculateJacobian(const VectorXd &x_state)
+{
+   // /**
+   // * TODO:
+   // * Calculate a Jacobian here.
+   // */
+
+   MatrixXd Hj(3, 4);
+   Hj.fill(0.0);
+   float epslon = 0.00001;
+
+   // recover state parameters
+   float px = x_state(0);
+   float py = x_state(1);
+   float vx = x_state(2);
+   float vy = x_state(3);
+
+   // pre-compute a set of terms to avoid repeated calculation
+   float c1 = px * px + py * py;
+   float c2 = sqrt(c1);
+   float c3 = (c1 * c2);
+
+   // check division by zero
+   if (fabs(c1) < epslon)
+   {
+      return Hj;
+   }
+
+   // compute the Jacobian matrix
+   Hj << (px / c2), (py / c2), 0, 0,
+       -(py / c1), (px / c1), 0, 0,
+       py * (vx * py - vy * px) / c3, px * (px * vy - py * vx) / c3, px / c2, py / c2;
+
+   return Hj;
+}
+```
+
+---
+
+### Evaluation performance
+To evaluate the performance of EKF, **Root Mean Squared Error** is chosen as the metric.
+
+in _tools.cpp_, implement `CalculateRMSE()` is implemented to calculate RMSE
+```
+VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
+                              const vector<VectorXd> &ground_truth)
+{
+   /**
+   * TODO: Calculate the RMSE here.
+   */
+   VectorXd RMSE(4);
+   RMSE.fill(0.0);
+   size_t n = ground_truth.size();
+   for (size_t i = 0; i < n; ++i)
+   {
+      // squared errors
+      VectorXd error = estimations[i] - ground_truth[i];
+      error = error.array() * error.array();
+      RMSE += error;
+   }
+   RMSE /= n;
+   RMSE = RMSE.array().sqrt();
+
+   return RMSE;
+}
+```
+
+---
+
+### Result
+The RMSE result as follows:
+* x : 0.07
+* y : 0.09
+* vx : 0.34
+* vy : 0.44
+
+<p align="center">
+  <img  src="demo_images/EKF.png">
+</p>
+
 
